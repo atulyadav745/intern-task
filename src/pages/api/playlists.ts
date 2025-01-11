@@ -2,6 +2,16 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { connectToMongoDB } from "@/lib/mongodb";
 import { Playlist } from "@/models/Playlist";
 
+interface YouTubeVideoItem {
+  id: string;
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: { medium: { url: string } };
+    resourceId: { videoId: string };
+  };
+}
+
 interface YouTubePlaylistItem {
   id: string;
   snippet: {
@@ -12,6 +22,10 @@ interface YouTubePlaylistItem {
 
 interface YouTubePlaylistsResponse {
   items: YouTubePlaylistItem[];
+}
+
+interface YouTubePlaylistVideosResponse {
+  items: YouTubeVideoItem[];
 }
 
 export default async function handler(
@@ -29,7 +43,7 @@ export default async function handler(
     await connectToMongoDB();
 
     // Fetch playlists from the YouTube API
-    const response = await fetch(
+    const playlistsResponse = await fetch(
       "https://www.googleapis.com/youtube/v3/playlists?part=snippet&mine=true",
       {
         headers: {
@@ -38,33 +52,47 @@ export default async function handler(
       }
     );
 
-    if (!response.ok) {
+    if (!playlistsResponse.ok) {
       throw new Error("Failed to fetch playlists from YouTube API");
     }
 
-    const data: YouTubePlaylistsResponse = await response.json();
+    const playlistsData: YouTubePlaylistsResponse = await playlistsResponse.json();
 
-    // Save playlists to the database
-    const userId = "testUser"; // Replace with dynamic user ID if needed
-    for (const item of data.items) {
-      const playlistId = item.id;
-      const title = item.snippet.title;
-      const description = item.snippet.description;
+    const playlists = [];
+    for (const playlist of playlistsData.items) {
+      const playlistId = playlist.id;
 
-      // Save or update the playlist in the database
-      await Playlist.findOneAndUpdate(
-        { playlistId },
-        { userId, playlistId, title, description },
-        { upsert: true } // Insert if it doesn't exist
+      // Fetch videos for the playlist
+      const videosResponse = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
-    }
 
-    // Return the playlists in the response
-    const playlists = data.items.map((item) => ({
-      id: item.id,
-      title: item.snippet.title,
-      description: item.snippet.description,
-    }));
+      if (!videosResponse.ok) {
+        throw new Error("Failed to fetch videos from YouTube API");
+      }
+
+      const videosData: YouTubePlaylistVideosResponse =
+        await videosResponse.json();
+
+      const videos = videosData.items.map((video) => ({
+        id: video.snippet.resourceId.videoId,
+        title: video.snippet.title,
+        description: video.snippet.description,
+        thumbnail: video.snippet.thumbnails.medium.url,
+      }));
+
+      playlists.push({
+        id: playlistId,
+        title: playlist.snippet.title,
+        description: playlist.snippet.description,
+        videos,
+      });
+    }
 
     res.status(200).json({ playlists });
   } catch (error) {

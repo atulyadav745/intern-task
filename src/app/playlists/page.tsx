@@ -1,20 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+interface Video {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+}
+
 interface Playlist {
   id: string;
   title: string;
   description: string;
+  videos: Video[];
 }
-
-import { useEffect, useState } from "react";
 
 export default function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null); // Track the currently playing video ID
 
   useEffect(() => {
-    // This ensures that the window object is accessed only on the client-side
     const token = new URLSearchParams(window.location.search).get("accessToken");
     setAccessToken(token);
   }, []);
@@ -55,22 +63,44 @@ export default function PlaylistsPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Your YouTube Playlists</h1>
-      <ul className="mt-4">
-        {playlists.map((playlist) => (
-          <li key={playlist.id} className="mb-4">
-            <h2 className="text-xl font-semibold">{playlist.title}</h2>
-            <p>{playlist.description}</p>
-            <a
-              href={`https://www.youtube.com/playlist?list=${playlist.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 underline"
-            >
-              View on YouTube
-            </a>
-          </li>
-        ))}
-      </ul>
+      {playlists.map((playlist) => (
+        <div key={playlist.id} className="mb-8">
+          <h2 className="text-xl font-semibold">{playlist.title}</h2>
+          <p>{playlist.description}</p>
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            {playlist.videos.map((video) => (
+              <div
+                key={video.id}
+                className="border p-4 cursor-pointer"
+                onClick={() =>
+                  setPlayingVideoId((prev) => (prev === video.id ? null : video.id))
+                } // Toggle video playback
+              >
+                {playingVideoId === video.id ? (
+                  <iframe
+                    width="100%"
+                    height="200"
+                    src={`https://www.youtube.com/embed/${video.id}`}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <>
+                    <img
+                      src={video.thumbnail}
+                      alt={video.title}
+                      className="mb-2"
+                    />
+                    <h3 className="font-bold">{video.title}</h3>
+                    <p>{video.description}</p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
