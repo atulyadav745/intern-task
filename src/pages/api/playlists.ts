@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { connectToMongoDB } from "@/lib/mongodb";
-import { Playlist } from "@/models/Playlist";
+// import { Playlist } from "@/models/Playlist";
 
 interface YouTubeVideoItem {
   id: string;

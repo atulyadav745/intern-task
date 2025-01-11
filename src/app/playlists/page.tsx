@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
+
 
 interface Video {
   id: string;
@@ -87,10 +89,12 @@ export default function PlaylistsPage() {
                   ></iframe>
                 ) : (
                   <>
-                    <img
+                    <Image
                       src={video.thumbnail}
                       alt={video.title}
                       className="mb-2"
+                      width={320}
+                      height={180}
                     />
                     <h3 className="font-bold">{video.title}</h3>
                     <p>{video.description}</p>

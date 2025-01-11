@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    domains: ['i9.ytimg.com','i.ytimg.com'], // Add the domain hosting the images
+  },
 };
 
 export default nextConfig;
